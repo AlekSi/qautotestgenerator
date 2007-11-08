@@ -1,0 +1,6 @@
+To build do the following:
+
+git clone git://repo.or.cz/rpp.git
+qmake
+make
+
