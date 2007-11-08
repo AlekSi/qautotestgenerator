@@ -125,7 +125,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
     // Includes
     out << endl;
     out << "#include <QtTest/QtTest>" << endl;
-    out << "#include <" << clazz->fileName().mid(2) << ">" << endl;
+    out << "#include <" << clazz->fileName().mid(clazz->fileName().indexOf('/')) << ">" << endl;
 
 
     // Generate class definition
@@ -289,18 +289,25 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
             for (int i = 0; i < fetchMeType.count(); ++i)
                 out << indent << QString("QFETCH(%1, %2);").arg(fetchMeType[i]).arg(fetchMeName[i]) << endl;
             out << endl;
+            out << indent << "Sub" << className << " " << shortName << ";" << endl;
+
+
             // any possible spies that the class emits
             // ### check spy args
             // ### properties
+            out << endl;
             int spies = 0;
             for(int i = 0; i < functions.count(); ++i) {
                 FunctionModelItem funt = functions[i];
                 if (funt->functionType() == CodeModel::Signal) {
-                    out << indent << "// QSignalSpy spy" << spies << "(foo, SIGNAL(" << funt->name() << "()));" << endl;
-                    out << indent << "// QCOMPARE(spy" << spies++ << ".count(), 0);" << endl;
+                    out << indent << QString("QSignalSpy spy%1(&%2, SIGNAL(%3()));").arg(spies).arg(shortName).arg(funt->name()) << endl;
+                    out << indent << QString("QCOMPARE(spy\%1.count(), 0);").arg(spies++) << endl;
                 }
             }
-
+            if (fun->accessPolicy() == CodeModel::Protected)
+                out << indent << shortName << ".call_" << fun->name() << "();" << endl;
+            else
+                out << indent << shortName << "." << fun->name() << "();" << endl;
             /*
             // any classes that can be used to check
             if (!fun->isConstant()) {
@@ -313,12 +320,6 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
                 }
             }
             */
-
-            out << indent << "Sub" << className << " " << shortName << ";" << endl;
-            if (fun->accessPolicy() == CodeModel::Protected)
-                out << indent << shortName << ".call_" << fun->name() << "();" << endl;
-            else
-                out << indent << shortName << "." << fun->name() << "();" << endl;
             out << indent << "*/" << endl;
             out << indent << "QVERIFY(false); // remove after test is implemented" << endl;
         }
