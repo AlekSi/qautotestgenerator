@@ -1,6 +1,37 @@
-To build do the following:
+qautotestgenerator is a tool to generate stub tests for a C++ class.  When writing tests for new code one of the more annoying parts is getting the initial file up and running.  qautotestgenerator helps by automatically creating quite a bit of stub code after which you just go through the file filling it in with the actual tests.
+
+Some features include:
+- Creates a stub tests for each non private function in the class.
+- Creates a subclass for the class to expose any protected functions for testing.
+- Creates a basic sanity test that just calls each function.
+- Creates a _data() function for each test.
+- Populates the _data() functions with columns for each argument and the return value.
+- Adds QFETCH stub code that matches the generated _data function as a place to start from.
+- Adds the four init and cleanup functions with documentation so you don't have to look up what does what.
+- Adds signal spys to each tests if the class contains any signals.
+
+To find out more about QTestLib check out its documentation at http://doc.trolltech.com/4.3/qtestlib-manual.html
+
+========
+BUILDING
+========
+
+qautotestgenerator requires rpp to build so first use git to clone its repository and then you can build.
 
 git clone git://repo.or.cz/rpp.git
+
 qmake
 make
 
+=======
+EXAMPLE
+=======
+
+In the example directory is a file example.h that contains a little class.  Execute the following to generate and build a test.
+
+./qautotestgenerator example/example.h Example > example/tst_example.cpp
+cd example
+qmake -project
+echo "CONFIG += qtestlib" >> example.pro
+qmake
+make
