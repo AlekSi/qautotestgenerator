@@ -223,6 +223,8 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
         out << QString("void %1::%2()\n{\n}").arg(tstClassName).arg(extraFunctions.at(i).first) << endl;
     }
 
+    QStringList declared;
+
     out << endl;
     out << QString("void %1::%2_data()\n{\n}\n").arg(tstClassName).arg(className.toLower()) << endl;
     out << QString("void %1::%2()").arg(tstClassName).arg(className.toLower()) << endl;
@@ -237,7 +239,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
                 out << indent << shortName << "." << fun->name() << "();" << endl;
         }
         out << indent << "*/" << endl;
-        out << indent << "QVERIFY(false); // remove after test is implemented" << endl;
+        out << indent << "QSKIP(\"Test is not implemented.\", SkipAll);" << endl;
     }
     out << "}" << endl;
 
@@ -248,7 +250,6 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
 
         // data function
         out << endl;
-        out << QString("void %1::%2_data()\n{").arg(tstClassName).arg(fun->name()) << endl;
 
         QStringList fetchMeType;
         QStringList fetchMeName;
@@ -275,35 +276,44 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
             fetchMeName << "foo";
         }
 
-
+        QStringList knownTypes;
+        knownTypes << "int" << "qreal" << "bool" << "QString" << "QRectF" << "QPointF";
         bool knowAllTypes = true;
-        for (int i = 0; i < fetchMeType.count(); ++i)
-            if (fetchMeType[i] != "int"
-                && fetchMeType[i] != "qreal"
-                && fetchMeType[i] != "QString")
+        for (int i = 0; i < fetchMeType.count(); ++i) {
+            if (!knownTypes.contains(fetchMeType[i])) {
+                if (!declared.contains(fetchMeType[i])) {
+                    out << "Q_DECLARE_METATYPE(" << fetchMeType[i] << ")" << endl;
+                    declared.append(fetchMeType[i]);
+                }
                 knowAllTypes = false;
+            }
+        }
+
+
+        out << QString("void %1::%2_data()\n{").arg(tstClassName).arg(fun->name()) << endl;
 
         if (!knowAllTypes)
             out << indent << "/*" << endl;
         for (int i = 0; i < fetchMeType.count(); ++i)
             out << indent << QString("QTest::addColumn<%1>(\"%2\");").arg(fetchMeType[i]).arg(fetchMeName[i]) << endl;
 
-        if (knowAllTypes) {
-            out << indent << "QTest::newRow(\"null\")";
-            for (int i = 0; i < fetchMeType.count(); ++i) {
-                out << " << ";
-                if (fetchMeType[i] == "int")
-                    out << "0";
-                if (fetchMeType[i] == "qreal")
-                    out << "0.0";
-                if (fetchMeType[i] == "QString")
-                    out << "QLatin1String(\"foo\")";
-            }
-            out << ";" << endl;
-        } else {
-            out << indent << "QTest::newRow(\"null\") << 0;" << endl;
-            out << indent << "*/" << endl;
+        out << indent << "QTest::newRow(\"null\")";
+        for (int i = 0; i < fetchMeType.count(); ++i) {
+            out << " << ";
+            if (fetchMeType[i] == "int")
+                out << "0";
+            else if (fetchMeType[i] == "qreal")
+                out << "0.0";
+            else if (fetchMeType[i] == "bool")
+                out << "false";
+            else if (fetchMeType[i] == "QString")
+                out << "QLatin1String(\"foo\")";
+            else
+                out << fetchMeType[i] << "()";
         }
+        out << ";" << endl;
+        if (!knowAllTypes)
+            out << indent << "*/" << endl;
         out << "}" << endl;
 
         out << endl;
@@ -330,10 +340,25 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
                     out << indent << QString("QCOMPARE(spy\%1.count(), 0);").arg(spies++) << endl;
                 }
             }
+
+            bool returnsSomething = (fun->type().toString() != "void");
+            out << indent;
+            if (returnsSomething)
+                out << "QCOMPARE(";
+            out << shortName << ".";
             if (fun->accessPolicy() == CodeModel::Protected)
-                out << indent << shortName << ".call_" << fun->name() << "();" << endl;
-            else
-                out << indent << shortName << "." << fun->name() << "();" << endl;
+                out << "call_";
+            out << fun->name();
+            out << "(";
+            QStringList args;
+            for (int i = 0; i < arguments.count(); ++i)
+                args.append(arguments[i]->name());
+            out << args.join(", ");
+            out << ")";
+            if (returnsSomething) {
+                out << ", " << fun->name() << ")";
+            }
+            out << ";" << endl;
             /*
             // any classes that can be used to check
             if (!fun->isConstant()) {
@@ -347,7 +372,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
             }
             */
             out << indent << "*/" << endl;
-            out << indent << "QVERIFY(false); // remove after test is implemented" << endl;
+            out << indent << "QSKIP(\"Test is not implemented.\", SkipAll);" << endl;
         }
         out << "}" << endl;
         lastName = fun->name();
