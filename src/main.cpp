@@ -108,7 +108,10 @@ QString makeFunction(FunctionModelItem function, const QString preFix = QString(
     ArgumentList arguments = function->arguments();
     QStringList args;
     for (int i = 0; i < arguments.count(); ++i) {
-        QString theargs = arguments[i]->type().toString() + " " + arguments[i]->name();
+        QString arg = arguments[i]->name();
+        if (arg.isEmpty())
+            arg = QString("arg%1").arg(i);
+        QString theargs = arguments[i]->type().toString() + " " + arg;
         if (arguments[i]->defaultValue())
             theargs += " = " + arguments[i]->defaultValueExpression();
         args += theargs;
@@ -205,8 +208,12 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
                 ArgumentList arguments = fun->arguments();
                 if (!fun->isAbstract()) {
                     QStringList args;
-                    for (int j = 0; j < arguments.count(); ++j)
-                        args += arguments[j]->name();
+                    for (int j = 0; j < arguments.count(); ++j) {
+                        QString arg = arguments[j]->name();
+                        if (arg.isEmpty())
+                            arg = QString("arg%1").arg(j);
+                        args += arg;
+                    }
                     out << QString("return Sub%1::%2(%3);").arg(className).arg(fun->name()).arg(args.join(", "));
                 }
             }
