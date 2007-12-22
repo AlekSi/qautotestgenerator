@@ -336,10 +336,11 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
             for(int i = 0; i < functions.count(); ++i) {
                 FunctionModelItem funt = functions[i];
                 if (funt->functionType() == CodeModel::Signal) {
-                    out << indent << QString("QSignalSpy spy%1(&%2, SIGNAL(%3()));").arg(spies).arg(shortName).arg(funt->name()) << endl;
-                    out << indent << QString("QCOMPARE(spy\%1.count(), 0);").arg(spies++) << endl;
+                    out << indent << QString("QSignalSpy spy%1(&%2, SIGNAL(%3()));").arg(spies++).arg(shortName).arg(funt->name()) << endl;
                 }
             }
+            if (spies > 0)
+                out << endl;
 
             bool returnsSomething = (fun->type().toString() != "void");
             out << indent;
@@ -359,6 +360,18 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
                 out << ", " << fun->name() << ")";
             }
             out << ";" << endl;
+
+            if (spies > 0)
+                out << endl;
+
+            spies = 0;
+            for(int i = 0; i < functions.count(); ++i) {
+                FunctionModelItem funt = functions[i];
+                if (funt->functionType() == CodeModel::Signal) {
+                    out << indent << QString("QCOMPARE(spy\%1.count(), 0);").arg(spies++) << endl;
+                }
+            }
+
             /*
             // any classes that can be used to check
             if (!fun->isConstant()) {
