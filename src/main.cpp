@@ -140,7 +140,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
     // License
     out << "/****************************************************************************" << endl
         << "**" << endl
-        << "** Copyright (C) 2007-$THISYEAR$ $TROLLTECH$. All rights reserved." << endl
+        << "** Copyright (C) 2008-$THISYEAR$ $TROLLTECH$. All rights reserved." << endl
         << "**" << endl
         << "** This file is part of the $MODULE$ of the Qt Toolkit." << endl
         << "**" << endl
