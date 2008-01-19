@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2007 Benjamin C Meyer
+* Copyright (C) 2007-2008 Benjamin C Meyer
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
