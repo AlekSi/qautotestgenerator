@@ -314,7 +314,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
             else if (fetchMeType[i] == "bool")
                 out << "false";
             else if (fetchMeType[i] == "QString")
-                out << "QLatin1String(\"foo\")";
+                out << "QString(\"foo\")";
             else
                 out << fetchMeType[i] << "()";
         }
