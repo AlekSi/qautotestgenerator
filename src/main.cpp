@@ -175,12 +175,13 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
         out << "private slots:" << endl;
         out << indent << QString("void %1_data();").arg(className.toLower()) << endl;
         out << indent << QString("void %1();").arg(className.toLower()) << endl;
-        QString lastName;
+        QStringList done;
         foreach (FunctionModelItem fun, functions) {
-            if (lastName == fun->name()) continue;
+            if (done.contains(fun->name()))
+                continue;
             out << indent << QString("void %1_data();").arg(fun->name()) << endl;
             out << indent << QString("void %1();").arg(fun->name()) << endl;
-            lastName = fun->name();
+            done.append(fun->name());
         }
     }
     out << "};" << endl;
@@ -238,21 +239,31 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
     out << "{" << endl;
     {
         out << indent << QString("Sub%1 %2;").arg(className).arg(shortName) << endl;
-        out << indent << "/*" << endl;
+        out << "#if 0" << endl;
         foreach (FunctionModelItem fun, functions) {
+            QStringList args;
+            for (int i = 0; i < fun->arguments().count(); ++i)
+                args += fun->arguments()[i]->type().toString();
+            QString returnType = fun->type().toString();
+            out << indent;
+            if (returnType != "void")
+                out << "QCOMPARE(";
+            out << shortName << ".";
             if (fun->accessPolicy() == CodeModel::Protected)
-                out << indent << shortName << ".call_" << fun->name() << "();" << endl;
-            else
-                out << indent << shortName << "." << fun->name() << "();" << endl;
+                out << "call_";
+            out << fun->name() << "(" << args.join(", ") << ")";
+            if (returnType != "void")
+                out << ", " << returnType << ")";
+            out << ";" << endl;
         }
-        out << indent << "*/" << endl;
+        out << "#endif" << endl;
         out << indent << "QSKIP(\"Test is not implemented.\", SkipAll);" << endl;
     }
     out << "}" << endl;
 
-    QString lastName;
+    QStringList done;
     foreach (FunctionModelItem fun, functions) {
-        if (lastName == fun->name())
+        if (done.contains(fun->name()))
             continue;
 
         // data function
@@ -284,7 +295,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
         }
 
         QStringList knownTypes;
-        knownTypes << "int" << "qreal" << "bool" << "QString" << "QRectF" << "QPointF" << "QPixmap" << "QUrl";
+        knownTypes << "int" << "qreal" << "bool" << "QString" << "QRectF" << "QPointF" << "QPixmap" << "QFont" << "QUrl" << "uint";
         bool knowAllTypes = true;
         for (int i = 0; i < fetchMeType.count(); ++i) {
             if (!knownTypes.contains(fetchMeType[i])) {
@@ -300,7 +311,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
         out << QString("void %1::%2_data()\n{").arg(tstClassName).arg(fun->name()) << endl;
 
         if (!knowAllTypes)
-            out << indent << "/*" << endl;
+            out << "#if 0" << endl;
         for (int i = 0; i < fetchMeType.count(); ++i)
             out << indent << QString("QTest::addColumn<%1>(\"%2\");").arg(fetchMeType[i]).arg(fetchMeName[i]) << endl;
 
@@ -320,7 +331,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
         }
         out << ";" << endl;
         if (!knowAllTypes)
-            out << indent << "*/" << endl;
+            out << "#endif" << endl;
         out << "}" << endl;
 
         out << endl;
@@ -328,7 +339,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
         out << QString("void %1::%2()").arg(tstClassName).arg(fun->name()) << endl;
         out << "{" << endl;
         {
-            out << indent << "/*" << endl;
+            out << "#if 0" << endl;
             for (int i = 0; i < fetchMeType.count(); ++i)
                 out << indent << QString("QFETCH(%1, %2);").arg(fetchMeType[i]).arg(fetchMeName[i]) << endl;
             out << endl;
@@ -343,7 +354,13 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
             for(int i = 0; i < functions.count(); ++i) {
                 FunctionModelItem funt = functions[i];
                 if (funt->functionType() == CodeModel::Signal) {
-                    out << indent << QString("QSignalSpy spy%1(&%2, SIGNAL(%3()));").arg(spies++).arg(shortName).arg(funt->name()) << endl;
+                    ArgumentList arguments = funt->arguments();
+                    QStringList args;
+                    for (int i = 0; i < arguments.count(); ++i) {
+                        args += arguments[i]->type().toString();
+                    }
+
+                    out << indent << QString("QSignalSpy spy%1(&%2, SIGNAL(%3(%4)));").arg(spies++).arg(shortName).arg(funt->name()).arg(args.join(", ")) << endl;
                 }
             }
             if (spies > 0)
@@ -391,11 +408,11 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
                 }
             }
             */
-            out << indent << "*/" << endl;
+            out << "#endif" << endl;
             out << indent << "QSKIP(\"Test is not implemented.\", SkipAll);" << endl;
         }
         out << "}" << endl;
-        lastName = fun->name();
+        done.append(fun->name());
     }
 
     // Footer
@@ -409,7 +426,7 @@ int main(int argc, char **argv)
 {
     if (argc < 3) {
         QTextStream error(stderr);
-        error << "usage: " << argv[0] << " foo.cpp" << " Class" << endl;
+        error << "usage: " << argv[0] << " foo.h" << " Class" << endl;
         return -1;
     }
 
@@ -443,6 +460,11 @@ int main(int argc, char **argv)
         if (dom->classes().at(i)->name() == className)
             break;
     }
+    if (i == dom->classes().count()) {
+        qWarning() << "Class not found: " << className << "Try removing the includes at the top of the file.";
+        return 1;
+    }
+
     ClassModelItem clazz = dom->classes()[i];
     // TODO parent class?
     FunctionList functions = clazz->functions();

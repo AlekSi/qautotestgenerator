@@ -2,3 +2,10 @@ Makefile*
 rpp
 src/debug
 qautotestgenerator
+example/example.pro
+example/tst_example.cpp
+example/example
+example/*.o
+example/*.moc
+example/moc_*
+*.swp
