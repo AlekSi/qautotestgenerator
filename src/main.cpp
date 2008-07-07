@@ -138,24 +138,32 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
     QTextStream out(stdout);
 
     // License
-    out << "/****************************************************************************" << endl
-        << "**" << endl
-        << "** Copyright (C) 2008-$THISYEAR$ $TROLLTECH$. All rights reserved." << endl
-        << "**" << endl
-        << "** This file is part of the $MODULE$ of the Qt Toolkit." << endl
-        << "**" << endl
-        << "** $TROLLTECH_DUAL_LICENSE$" << endl
-        << "**" << endl
-        << "** This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE" << endl
-        << "** WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE." << endl
-        << "**" << endl
-        << "****************************************************************************/" << endl;
+    out << "/* " << endl <<
+" * Copyright XXXX Author <foo@bar.com>" << endl <<
+" *" << endl <<
+" * This program is free software; you can redistribute it and/or modify" << endl <<
+" * it under the terms of the GNU General Public License as published by" << endl <<
+" * the Free Software Foundation; either version 2 of the License, or" << endl <<
+" * (at your option) any later version." << endl <<
+" *" << endl <<
+" * This program is distributed in the hope that it will be useful," << endl <<
+" * but WITHOUT ANY WARRANTY; without even the implied warranty of" << endl <<
+" * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the" << endl <<
+" * GNU General Public License for more details." << endl <<
+" *" << endl <<
+" * You should have received a copy of the GNU General Public License" << endl <<
+" * along with this program; if not, write to the Free Software" << endl <<
+" * Foundation, Inc., 51 Franklin Street, Fifth Floor," << endl <<
+" * Boston, MA  02110-1301  USA" << endl <<
+" */" << endl;
 
     // Includes
     out << endl;
     out << "#include <QtTest/QtTest>" << endl;
-    out << "#include <" << clazz->fileName().mid(clazz->fileName().indexOf('/')) << ">" << endl;
-
+    QString classFileName = clazz->fileName().mid(clazz->fileName().indexOf('/'));
+    if (classFileName[0] == '/')
+        classFileName = classFileName.mid(1);
+    out << "#include <" << classFileName << ">" << endl;
 
     // Generate class definition
     out << endl;
@@ -175,6 +183,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
         out << "private slots:" << endl;
         out << indent << QString("void %1_data();").arg(className.toLower()) << endl;
         out << indent << QString("void %1();").arg(className.toLower()) << endl;
+        out << endl;
         QStringList done;
         foreach (FunctionModelItem fun, functions) {
             if (done.contains(fun->name()))
