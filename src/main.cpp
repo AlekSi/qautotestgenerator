@@ -99,6 +99,22 @@ bool functionLessThan(CodeModelPointer<_FunctionModelItem> &s1, CodeModelPointer
     return (s1->accessPolicy() < s2->accessPolicy());
 }
 
+// Automatically fill in with some default values, more compiles out of the box
+QString makeArg(const QString type) {
+    QString arg = type;
+    if (type == "int")
+        arg = "-1";
+    if (type == "bool")
+        arg = "false";
+    if (type.endsWith(" const&"))
+        arg = type.mid(0, type.length() - 7) + "()";
+    if (type == "QString")
+        arg = "QString()";
+    if (type.startsWith("QList<") && type.endsWith(">"))
+        arg += "()";
+    return arg;
+}
+
 QString makeFunction(FunctionModelItem function, const QString preFix = QString()) {
     QString fullName;
     fullName += function->type().toString();
@@ -138,7 +154,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
     QTextStream out(stdout);
 
     // License
-    out << "/* " << endl <<
+    out << "/*" << endl <<
 " * Copyright XXXX Author <foo@bar.com>" << endl <<
 " *" << endl <<
 " * This program is free software; you can redistribute it and/or modify" << endl <<
@@ -233,7 +249,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
     out << "};" << endl;
 
 
-    // Generate functions
+    // Generate extra functions
     for(int i = 0; i < extraFunctions.count(); ++i) {
         out << endl;
         out << QString("// %1").arg(extraFunctions.at(i).second) << endl;
@@ -242,6 +258,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
 
     QStringList declared;
 
+    // Make the test that calls every function
     out << endl;
     out << QString("void %1::%2_data()\n{\n}\n").arg(tstClassName).arg(className.toLower()) << endl;
     out << QString("void %1::%2()").arg(tstClassName).arg(className.toLower()) << endl;
@@ -251,9 +268,11 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
         out << "#if 0" << endl;
         foreach (FunctionModelItem fun, functions) {
             QStringList args;
-            for (int i = 0; i < fun->arguments().count(); ++i)
-                args += fun->arguments()[i]->type().toString();
-            QString returnType = fun->type().toString();
+            for (int i = 0; i < fun->arguments().count(); ++i) {
+                QString type= fun->arguments()[i]->type().toString();
+                args += makeArg(type);
+            }
+            QString returnType = makeArg(fun->type().toString());
             out << indent;
             if (returnType != "void")
                 out << "QCOMPARE(";
@@ -270,6 +289,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
     }
     out << "}" << endl;
 
+    // test each function
     QStringList done;
     foreach (FunctionModelItem fun, functions) {
         if (done.contains(fun->name()))
@@ -324,21 +344,45 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
         for (int i = 0; i < fetchMeType.count(); ++i)
             out << indent << QString("QTest::addColumn<%1>(\"%2\");").arg(fetchMeType[i]).arg(fetchMeName[i]) << endl;
 
-        out << indent << "QTest::newRow(\"null\")";
-        for (int i = 0; i < fetchMeType.count(); ++i) {
-            out << " << ";
-            if (fetchMeType[i] == "int")
-                out << "0";
-            else if (fetchMeType[i] == "qreal")
-                out << "0.0";
-            else if (fetchMeType[i] == "bool")
-                out << "false";
-            else if (fetchMeType[i] == "QString")
-                out << "QString(\"foo\")";
-            else
-                out << fetchMeType[i] << "()";
+        bool stubbed = false;
+        // fill out the most common cases
+        if (fetchMeType.count() == 1
+            && fetchMeType[0] == "bool") {
+            out << indent << "QTest::newRow(\"true\") << true;" << endl;
+            out << indent << "QTest::newRow(\"false\") << false;" << endl;
+            stubbed = true;
         }
-        out << ";" << endl;
+        if (fetchMeType.count() == 1
+            && fetchMeType[0] == "QString") {
+            out << indent << "QTest::newRow(\"null\") << QString();" << endl;
+            out << indent << "QTest::newRow(\"foo\") << QString(\"foo\");" << endl;
+            stubbed = true;
+        }
+        if (fetchMeType.count() == 1
+            && fetchMeType[0] == "int") {
+            out << indent << "QTest::newRow(\"0\") << 0;" << endl;
+            out << indent << "QTest::newRow(\"-1\") << -1;" << endl;
+            stubbed = true;
+        }
+
+        if (!stubbed) {
+            out << indent << "QTest::newRow(\"null\")";
+            for (int i = 0; i < fetchMeType.count(); ++i) {
+                out << " << ";
+                if (fetchMeType[i] == "int")
+                    out << "0";
+                else if (fetchMeType[i] == "qreal")
+                    out << "0.0";
+                else if (fetchMeType[i] == "bool")
+                    out << "false";
+                else if (fetchMeType[i] == "QString")
+                    out << "QString()";
+                else
+                    out << fetchMeType[i] << "()";
+            }
+            out << ";" << endl;
+        }
+
         if (!knowAllTypes)
             out << "#endif" << endl;
         out << "}" << endl;
