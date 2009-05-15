@@ -324,7 +324,7 @@ void outputFile(ClassModelItem clazz, FunctionList functions,
         }
 
         QStringList knownTypes;
-        knownTypes << "int" << "qreal" << "bool" << "QString" << "QRectF" << "QPointF" << "QPixmap" << "QFont" << "QUrl" << "uint";
+        knownTypes << "int" << "qreal" << "bool" << "QString" << "QRectF" << "QPointF" << "QPixmap" << "QFont" << "QUrl" << "uint" << "QImage" << "QStringList";
         bool knowAllTypes = true;
         for (int i = 0; i < fetchMeType.count(); ++i) {
             if (!knownTypes.contains(fetchMeType[i])) {
