@@ -1,0 +1,3 @@
+[submodule "rpp"]
+	path = rpp
+	url = git://github.com/icefox/rpp.git

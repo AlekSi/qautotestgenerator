@@ -1,5 +1,4 @@
 Makefile*
-rpp
 src/debug
 qautotestgenerator
 example/example.pro
